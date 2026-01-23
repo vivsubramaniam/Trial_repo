@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  photoPath      String?
+  lifetimePoints Int      @default(0)
+  currentStreak  Int      @default(0)
+  streakBonus    Int      @default(1)  // Current bonus (+1 to +7, resets weekly)
+  lastActiveDate DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  assignedTasks         Task[]               @relation("AssignedTasks")
+  createdTasks          Task[]               @relation("CreatedTasks")
+  completions           TaskCompletion[]
+  milestoneRedemptions  MilestoneRedemption[]
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  title          String
+  points         Int
+  recurrence     String   // "daily", "weekly", "once", or specific days like "mon,thu"
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  assignedUserId String?
+  assignedUser   User?    @relation("AssignedTasks", fields: [assignedUserId], references: [id])
+  createdById    String
+  createdBy      User     @relation("CreatedTasks", fields: [createdById], references: [id])
+  completions    TaskCompletion[]
+}
+
+model TaskCompletion {
+  id          String   @id @default(cuid())
+  completedAt DateTime @default(now())
+  basePoints  Int
+  bonusPoints Int
+  notes       String?
+
+  // Relations
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([completedAt])
+  @@index([userId])
+}
+
+model Milestone {
+  id             String   @id @default(cuid())
+  pointsRequired Int      @unique
+  rewardName     String
+  description    String?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  redemptions MilestoneRedemption[]
+}
+
+model MilestoneRedemption {
+  id         String    @id @default(cuid())
+  reachedAt  DateTime  @default(now())
+  redeemedAt DateTime?
+
+  // Relations
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([milestoneId, userId])
+}
