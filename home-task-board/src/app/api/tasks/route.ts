@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, points, recurrence, assignedUserId, createdById } = body
+    const { title, points, recurrence, assignedUserId, createdById, deadline } = body
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 })
@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
         points,
         recurrence,
         assignedUserId: assignedUserId || null,
+        deadline: deadline ? new Date(deadline) : null,
         createdById,
       },
       include: {

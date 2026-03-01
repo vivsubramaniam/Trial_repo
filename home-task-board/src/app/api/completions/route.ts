@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { calculateStreakBonus, shouldResetStreak } from '@/lib/utils'
+import { calculateStreakBonus, shouldResetStreak, isTaskAvailableToday } from '@/lib/utils'
 import { startOfDay, endOfDay, subDays } from 'date-fns'
 
 // GET /api/completions - Get task completions
@@ -93,16 +93,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate streak bonus
+    // Calculate points (streak bonus applied regardless, streak counter updated only when all tasks done)
     const streakBonus = calculateStreakBonus(user.streakBonus, user.lastActiveDate)
     const bonusPoints = streakBonus - 1 // Bonus is the extra points above base
     const totalPoints = task.points + bonusPoints
 
-    // Check if streak should be reset
-    const streakReset = shouldResetStreak(user.lastActiveDate)
-    const newStreak = streakReset ? 1 : user.currentStreak + 1
-
-    // Create completion and update user in a transaction
+    // Create completion and update user points in a transaction
     const [completion] = await prisma.$transaction([
       prisma.taskCompletion.create({
         data: {
@@ -122,8 +118,6 @@ export async function POST(request: NextRequest) {
         data: {
           lifetimePoints: { increment: totalPoints },
           spendablePoints: { increment: totalPoints },
-          currentStreak: newStreak,
-          streakBonus,
           lastActiveDate: new Date(),
         },
       }),
@@ -137,6 +131,45 @@ export async function POST(request: NextRequest) {
           ]
         : []),
     ])
+
+    // Check if all of this user's tasks for today are now completed
+    // (tasks assigned to them + shared tasks)
+    const todayStart = startOfDay(new Date())
+    const todayEnd = endOfDay(new Date())
+
+    // Only check tasks specifically assigned to this user (not shared tasks)
+    const assignedTasks = await prisma.task.findMany({
+      where: {
+        isActive: true,
+        assignedUserId: userId,
+      },
+      include: {
+        completions: {
+          where: {
+            userId,
+            completedAt: { gte: todayStart, lte: todayEnd },
+          },
+        },
+      },
+    })
+
+    // Filter to tasks available today using recurrence check
+    const todayTasks = assignedTasks.filter((t) => isTaskAvailableToday(t.recurrence))
+
+    const allDone = todayTasks.length > 0 && todayTasks.every((t) => t.completions.length > 0)
+
+    if (allDone && todayTasks.length > 0) {
+      const streakReset = shouldResetStreak(user.lastActiveDate)
+      const newStreak = streakReset ? 1 : user.currentStreak + 1
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          currentStreak: newStreak,
+          streakBonus,
+        },
+      })
+    }
 
     return NextResponse.json(completion, { status: 201 })
   } catch (error) {

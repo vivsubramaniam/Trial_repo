@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState<string | null>(null)
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', points: 5, recurrence: 'daily', assignedUserId: '' })
+  const [newTask, setNewTask] = useState({ title: '', points: 5, recurrence: 'daily', assignedUserId: '', deadline: '' })
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -86,12 +86,13 @@ export default function Dashboard() {
           points: newTask.points,
           recurrence: newTask.recurrence,
           assignedUserId: newTask.assignedUserId || null,
+          deadline: newTask.deadline || null,
           createdById: selectedUserId,
         }),
       })
       if (res.ok) {
         setShowTaskModal(false)
-        setNewTask({ title: '', points: 5, recurrence: 'daily', assignedUserId: '' })
+        setNewTask({ title: '', points: 5, recurrence: 'daily', assignedUserId: '', deadline: '' })
         fetchData()
       }
     } catch (error) {
@@ -102,6 +103,11 @@ export default function Dashboard() {
   }
 
   const selectedUser = users.find((u) => u.id === selectedUserId)
+
+  // Only show tasks assigned to the selected user or shared (unassigned) tasks
+  const myTasks = tasks.filter(
+    (t) => !t.assignedUserId || t.assignedUserId === selectedUserId
+  )
 
   // For shared tasks: done if ANYONE completed it
   // For assigned tasks: done if the assigned user completed it
@@ -114,8 +120,8 @@ export default function Dashboard() {
     return task.completions.some((c) => c.userId === task.assignedUserId)
   }
 
-  const pendingTasks = tasks.filter((t) => !isTaskDone(t))
-  const completedTasks = tasks.filter((t) => isTaskDone(t))
+  const pendingTasks = myTasks.filter((t) => !isTaskDone(t))
+  const completedTasks = myTasks.filter((t) => isTaskDone(t))
 
   if (loading) {
     return (
@@ -267,6 +273,12 @@ export default function Dashboard() {
               { value: 'weekly', label: 'Weekly' },
               { value: 'once', label: 'One-time' },
             ]}
+          />
+          <Input
+            label="Deadline (optional)"
+            type="date"
+            value={newTask.deadline}
+            onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
           />
           <Select
             label="Assign To"

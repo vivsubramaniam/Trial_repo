@@ -31,6 +31,7 @@ model Task {
   title          String
   points         Int
   recurrence     String   // "daily", "weekly", "once", or specific days like "mon,thu"
+  deadline       DateTime?  // Optional deadline, null means no deadline
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -85,4 +86,41 @@ model RewardRedemption {
 
   @@index([userId])
   @@index([redeemedAt])
+}
+
+model ExpenseCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  expenses  Expense[]
+}
+
+model PaymentMethod {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  expenses  Expense[]
+}
+
+model Expense {
+  id               String          @id @default(cuid())
+  date             DateTime
+  amount           Float
+  description      String
+  note             String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  categoryId       String
+  category         ExpenseCategory @relation(fields: [categoryId], references: [id])
+  paymentMethodId  String
+  paymentMethod    PaymentMethod   @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([date])
+  @@index([categoryId])
+  @@index([paymentMethodId])
 }

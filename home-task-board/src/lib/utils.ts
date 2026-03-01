@@ -127,3 +127,11 @@ export function getInitials(name: string): string {
 export function pluralize(count: number, singular: string, plural?: string): string {
   return count === 1 ? singular : (plural || `${singular}s`)
 }
+
+export function formatCurrency(amount: number): string {
+  return `$${amount.toFixed(2)}`
+}
+
+export function getCurrentMonth(): string {
+  return format(new Date(), 'yyyy-MM')
+}

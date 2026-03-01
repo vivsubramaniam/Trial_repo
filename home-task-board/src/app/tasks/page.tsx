@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Button, Input, Select, Modal, EmptyState } from '@/components'
-import { getRecurrenceLabel } from '@/lib/utils'
+import { getRecurrenceLabel, formatDate } from '@/lib/utils'
 import type { Task, User } from '@/lib/types'
 
 export default function TasksPage() {
@@ -16,6 +16,7 @@ export default function TasksPage() {
     points: 5,
     recurrence: 'daily',
     assignedUserId: '',
+    deadline: '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -44,7 +45,7 @@ export default function TasksPage() {
 
   function openAddModal() {
     setEditingTask(null)
-    setFormData({ title: '', points: 5, recurrence: 'daily', assignedUserId: '' })
+    setFormData({ title: '', points: 5, recurrence: 'daily', assignedUserId: '', deadline: '' })
     setShowModal(true)
   }
 
@@ -55,6 +56,7 @@ export default function TasksPage() {
       points: task.points,
       recurrence: task.recurrence,
       assignedUserId: task.assignedUserId || '',
+      deadline: task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '',
     })
     setShowModal(true)
   }
@@ -77,6 +79,7 @@ export default function TasksPage() {
             points: formData.points,
             recurrence: formData.recurrence,
             assignedUserId: formData.assignedUserId || null,
+            deadline: formData.deadline || null,
           }),
         })
       } else {
@@ -88,6 +91,7 @@ export default function TasksPage() {
             points: formData.points,
             recurrence: formData.recurrence,
             assignedUserId: formData.assignedUserId || null,
+            deadline: formData.deadline || null,
             createdById: users[0].id,
           }),
         })
@@ -145,6 +149,7 @@ export default function TasksPage() {
                   <h3 className="font-semibold text-gray-900">{task.title}</h3>
                   <p className="text-sm text-gray-500">
                     {task.points} pts | {getRecurrenceLabel(task.recurrence)}
+                    {task.deadline && ` | Due: ${formatDate(new Date(task.deadline))}`}
                     {task.assignedUser && ` | Assigned to ${task.assignedUser.name}`}
                   </p>
                 </div>
@@ -194,6 +199,12 @@ export default function TasksPage() {
               { value: 'tue,thu', label: 'Tue, Thu' },
               { value: 'sat,sun', label: 'Weekends' },
             ]}
+          />
+          <Input
+            label="Deadline (optional)"
+            type="date"
+            value={formData.deadline}
+            onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
           />
           <Select
             label="Assign To (optional)"

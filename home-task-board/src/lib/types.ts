@@ -16,6 +16,7 @@ export interface Task {
   title: string
   points: number
   recurrence: string
+  deadline: Date | null
   isActive: boolean
   assignedUserId: string | null
   assignedUser?: User | null
@@ -68,6 +69,45 @@ export interface WeeklyStats {
   weekEnd: string
   totalByUser: Record<string, number>
   completionsByUser: Record<string, number>
+}
+
+export interface ExpenseCategory {
+  id: string
+  name: string
+  isActive: boolean
+  createdAt: Date
+}
+
+export interface PaymentMethod {
+  id: string
+  name: string
+  isActive: boolean
+  createdAt: Date
+}
+
+export interface Expense {
+  id: string
+  date: Date
+  amount: number
+  description: string
+  note: string | null
+  categoryId: string
+  category?: ExpenseCategory
+  paymentMethodId: string
+  paymentMethod?: PaymentMethod
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ExpenseSummary {
+  totalAmount: number
+  expenseCount: number
+  avgPerDay: number
+  topCategory: string | null
+  byCategory: { name: string; total: number }[]
+  byPaymentMethod: { name: string; total: number }[]
+  vsLastMonth: { amount: number; percentChange: number } | null
+  dailyTotals: { date: string; total: number }[]
 }
 
 export type RecurrenceType = 'daily' | 'weekly' | 'once' | string // string for specific days like "mon,thu"

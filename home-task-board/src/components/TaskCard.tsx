@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { UserAvatar } from './UserAvatar'
 import { PointsBadge } from './PointsBadge'
-import { cn, getRecurrenceLabel } from '@/lib/utils'
+import { cn, getRecurrenceLabel, formatDate } from '@/lib/utils'
 import type { Task, User, TaskCompletion } from '@/lib/types'
 
 interface TaskCardProps {
@@ -59,6 +59,15 @@ export function TaskCard({
               <span>📅</span>
               {getRecurrenceLabel(task.recurrence)}
             </span>
+            {task.deadline && (
+              <span className={cn(
+                'inline-flex items-center gap-1',
+                new Date(task.deadline) < new Date() && !isCompleted ? 'text-red-500 font-medium' : ''
+              )}>
+                <span>⏰</span>
+                {formatDate(new Date(task.deadline))}
+              </span>
+            )}
             {task.assignedUser ? (
               <span className="inline-flex items-center gap-1">
                 <span>👤</span>

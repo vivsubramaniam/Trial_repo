@@ -40,7 +40,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { title, points, recurrence, assignedUserId, isActive } = body
+    const { title, points, recurrence, assignedUserId, isActive, deadline } = body
 
     const updateData: Record<string, unknown> = {}
 
@@ -68,6 +68,10 @@ export async function PATCH(
 
     if (isActive !== undefined) {
       updateData.isActive = isActive
+    }
+
+    if (deadline !== undefined) {
+      updateData.deadline = deadline ? new Date(deadline) : null
     }
 
     const task = await prisma.task.update({

@@ -5,22 +5,29 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  // Create default milestones
-  const milestones = [
-    { pointsRequired: 100, rewardName: 'Ice Cream Treat', description: 'A special ice cream outing for the family' },
-    { pointsRequired: 250, rewardName: 'Movie Night', description: 'Pick any movie for family movie night' },
-    { pointsRequired: 500, rewardName: 'Special Outing', description: 'Choose a fun activity for the weekend' },
-    { pointsRequired: 1000, rewardName: 'Big Reward', description: 'A major reward of your choice!' },
+  // Seed default expense categories
+  const defaultCategories = [
+    'Groceries',
+    'Utilities',
+    'Rent/Mortgage',
+    'Transport',
+    'Dining Out',
+    'Entertainment',
+    'Health',
+    'Shopping',
+    'Subscriptions',
+    'Other',
   ]
 
-  for (const milestone of milestones) {
-    await prisma.milestone.upsert({
-      where: { pointsRequired: milestone.pointsRequired },
+  for (const name of defaultCategories) {
+    await prisma.expenseCategory.upsert({
+      where: { name },
       update: {},
-      create: milestone,
+      create: { name },
     })
   }
 
+  console.log(`Seeded ${defaultCategories.length} expense categories`)
   console.log('Database seeded successfully!')
 }
 
