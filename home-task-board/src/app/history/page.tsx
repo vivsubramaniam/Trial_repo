@@ -5,7 +5,7 @@ import { Card, EmptyState } from '@/components'
 import { formatDate, formatTime } from '@/lib/utils'
 import type { TaskCompletion } from '@/lib/types'
 
-interface CompletionWithDetails extends TaskCompletion {
+interface CompletionWithDetails extends Omit<TaskCompletion, 'task' | 'user'> {
   task: { title: string }
   user: { name: string }
 }

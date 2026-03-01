@@ -7,8 +7,11 @@ import type { Task, User } from '@/lib/types'
 interface CompletionData {
   id: string
   userId: string
+  taskId: string
   basePoints: number
   bonusPoints: number
+  completedAt: Date
+  notes: string | null
   user: User
 }
 
