@@ -112,6 +112,10 @@ model Expense {
   amount           Float
   description      String
   note             String?
+  isSplit          Boolean         @default(false)
+  splitPeople      Int?            // Total number of people including you
+  splitDetails     String?         // JSON string: [{"name": "John", "percent": 33}, ...]
+  mySharePercent   Float?          // Your percentage of the split
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 

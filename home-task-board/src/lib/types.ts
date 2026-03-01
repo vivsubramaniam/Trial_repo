@@ -91,12 +91,21 @@ export interface Expense {
   amount: number
   description: string
   note: string | null
+  isSplit: boolean
+  splitPeople: number | null
+  splitDetails: string | null
+  mySharePercent: number | null
   categoryId: string
   category?: ExpenseCategory
   paymentMethodId: string
   paymentMethod?: PaymentMethod
   createdAt: Date
   updatedAt: Date
+}
+
+export interface SplitDetail {
+  name: string
+  percent: number
 }
 
 export interface ExpenseSummary {

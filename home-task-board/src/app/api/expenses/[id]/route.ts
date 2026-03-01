@@ -35,12 +35,12 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { date, amount, description, note, categoryId, paymentMethodId } = body
+    const { date, amount, description, note, categoryId, paymentMethodId, isSplit, splitPeople, splitDetails, mySharePercent } = body
 
     const updateData: Record<string, unknown> = {}
 
     if (date !== undefined) {
-      updateData.date = new Date(date)
+      updateData.date = new Date(`${date}T12:00:00`)
     }
 
     if (amount !== undefined) {
@@ -67,6 +67,19 @@ export async function PATCH(
 
     if (paymentMethodId !== undefined) {
       updateData.paymentMethodId = paymentMethodId
+    }
+
+    if (isSplit !== undefined) {
+      updateData.isSplit = isSplit
+      if (isSplit) {
+        if (splitPeople !== undefined) updateData.splitPeople = splitPeople
+        if (splitDetails !== undefined) updateData.splitDetails = JSON.stringify(splitDetails)
+        if (mySharePercent !== undefined) updateData.mySharePercent = mySharePercent
+      } else {
+        updateData.splitPeople = null
+        updateData.splitDetails = null
+        updateData.mySharePercent = null
+      }
     }
 
     const expense = await prisma.expense.update({

@@ -16,6 +16,7 @@ const taskNavItems = [
 
 const expenseNavItems = [
   { href: '/expenses', label: 'Expenses', icon: '💰' },
+  { href: '/expenses/splits', label: 'Splits', icon: '🤝' },
   { href: '/expenses/summary', label: 'Summary', icon: '📊' },
   { href: '/expenses/settings', label: 'Settings', icon: '⚙️' },
 ]

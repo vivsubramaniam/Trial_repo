@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { date, amount, description, note, categoryId, paymentMethodId } = body
+    const { date, amount, description, note, categoryId, paymentMethodId, isSplit, splitPeople, splitDetails, mySharePercent } = body
 
     if (!date) {
       return NextResponse.json({ error: 'Date is required' }, { status: 400 })
@@ -67,10 +67,14 @@ export async function POST(request: NextRequest) {
 
     const expense = await prisma.expense.create({
       data: {
-        date: new Date(date),
+        date: new Date(`${date}T12:00:00`),
         amount,
         description: description.trim(),
         note: note?.trim() || null,
+        isSplit: isSplit || false,
+        splitPeople: isSplit ? splitPeople : null,
+        splitDetails: isSplit && splitDetails ? JSON.stringify(splitDetails) : null,
+        mySharePercent: isSplit ? mySharePercent : null,
         categoryId,
         paymentMethodId,
       },
