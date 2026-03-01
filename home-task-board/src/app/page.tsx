@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState<string | null>(null)
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', points: 5, recurrence: 'daily' })
+  const [newTask, setNewTask] = useState({ title: '', points: 5, recurrence: 'daily', assignedUserId: '' })
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -82,13 +82,16 @@ export default function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newTask,
+          title: newTask.title,
+          points: newTask.points,
+          recurrence: newTask.recurrence,
+          assignedUserId: newTask.assignedUserId || null,
           createdById: selectedUserId,
         }),
       })
       if (res.ok) {
         setShowTaskModal(false)
-        setNewTask({ title: '', points: 5, recurrence: 'daily' })
+        setNewTask({ title: '', points: 5, recurrence: 'daily', assignedUserId: '' })
         fetchData()
       }
     } catch (error) {
@@ -162,9 +165,9 @@ export default function Dashboard() {
             <Card className="mb-6">
               <div className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Points</p>
+                  <p className="text-sm text-gray-500">Available</p>
                   <p className="text-2xl font-bold text-primary-600">
-                    {selectedUser.lifetimePoints}
+                    {selectedUser.spendablePoints} pts
                   </p>
                 </div>
                 <div>
@@ -263,6 +266,15 @@ export default function Dashboard() {
               { value: 'daily', label: 'Daily' },
               { value: 'weekly', label: 'Weekly' },
               { value: 'once', label: 'One-time' },
+            ]}
+          />
+          <Select
+            label="Assign To"
+            value={newTask.assignedUserId}
+            onChange={(e) => setNewTask({ ...newTask, assignedUserId: e.target.value })}
+            options={[
+              { value: '', label: 'Shared (anyone can complete)' },
+              ...users.map((u) => ({ value: u.id, label: u.name })),
             ]}
           />
           <div className="flex gap-2 justify-end">

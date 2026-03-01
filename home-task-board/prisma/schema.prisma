@@ -3,15 +3,16 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id             String   @id @default(cuid())
   name           String
   photoPath      String?
-  lifetimePoints Int      @default(0)
+  lifetimePoints Int      @default(0)  // Total points ever earned (for stats)
+  spendablePoints Int     @default(0)  // Current points available to spend
   currentStreak  Int      @default(0)
   streakBonus    Int      @default(1)  // Current bonus (+1 to +7, resets weekly)
   lastActiveDate DateTime?
@@ -22,7 +23,7 @@ model User {
   assignedTasks         Task[]               @relation("AssignedTasks")
   createdTasks          Task[]               @relation("CreatedTasks")
   completions           TaskCompletion[]
-  milestoneRedemptions  MilestoneRedemption[]
+  rewardRedemptions     RewardRedemption[]
 }
 
 model Task {
@@ -59,27 +60,29 @@ model TaskCompletion {
   @@index([userId])
 }
 
-model Milestone {
-  id             String   @id @default(cuid())
-  pointsRequired Int      @unique
-  rewardName     String
-  description    String?
-  createdAt      DateTime @default(now())
+model Reward {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  pointsCost  Int      // How many points to redeem this reward
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
   // Relations
-  redemptions MilestoneRedemption[]
+  redemptions RewardRedemption[]
 }
 
-model MilestoneRedemption {
-  id         String    @id @default(cuid())
-  reachedAt  DateTime  @default(now())
-  redeemedAt DateTime?
+model RewardRedemption {
+  id          String   @id @default(cuid())
+  redeemedAt  DateTime @default(now())
+  pointsSpent Int      // Points spent at time of redemption
 
   // Relations
-  milestoneId String
-  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  rewardId String
+  reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
 
-  @@unique([milestoneId, userId])
+  @@index([userId])
+  @@index([redeemedAt])
 }

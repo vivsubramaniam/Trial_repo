@@ -1,18 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, EmptyState, UserAvatar } from '@/components'
-import type { User, Milestone, MilestoneRedemption } from '@/lib/types'
+import { Card, Button, EmptyState, Modal, Input, Textarea } from '@/components'
+import type { User, Reward } from '@/lib/types'
 
-interface MilestoneWithRedemptions extends Milestone {
-  redemptions: Array<MilestoneRedemption & { user: User }>
-}
-
-export default function MilestonesPage() {
-  const [milestones, setMilestones] = useState<MilestoneWithRedemptions[]>([])
+export default function RewardsPage() {
+  const [rewards, setRewards] = useState<Reward[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [redeeming, setRedeeming] = useState<string | null>(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newReward, setNewReward] = useState({ name: '', description: '', pointsCost: 50 })
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -20,23 +20,76 @@ export default function MilestonesPage() {
 
   async function fetchData() {
     try {
-      const [milestonesRes, usersRes] = await Promise.all([
-        fetch('/api/milestones'),
+      const [rewardsRes, usersRes] = await Promise.all([
+        fetch('/api/rewards'),
         fetch('/api/users'),
       ])
-      const [milestonesData, usersData] = await Promise.all([
-        milestonesRes.json(),
+      const [rewardsData, usersData] = await Promise.all([
+        rewardsRes.json(),
         usersRes.json(),
       ])
-      setMilestones(milestonesData)
+      setRewards(rewardsData)
       setUsers(usersData)
-      if (usersData.length > 0) {
+      if (usersData.length > 0 && !selectedUserId) {
         setSelectedUserId(usersData[0].id)
       }
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function redeemReward(rewardId: string) {
+    if (!selectedUserId) return
+
+    const reward = rewards.find(r => r.id === rewardId)
+    const user = users.find(u => u.id === selectedUserId)
+
+    if (!reward || !user) return
+
+    if (!confirm(`Redeem "${reward.name}" for ${reward.pointsCost} points?`)) return
+
+    setRedeeming(rewardId)
+    try {
+      const res = await fetch('/api/rewards/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rewardId, userId: selectedUserId }),
+      })
+
+      if (res.ok) {
+        alert(`${user.name} redeemed "${reward.name}"!`)
+        fetchData() // Refresh to get updated points
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Failed to redeem reward')
+      }
+    } catch (error) {
+      console.error('Failed to redeem reward:', error)
+    } finally {
+      setRedeeming(null)
+    }
+  }
+
+  async function createReward() {
+    if (!newReward.name.trim()) return
+    setCreating(true)
+    try {
+      const res = await fetch('/api/rewards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReward),
+      })
+      if (res.ok) {
+        setShowAddModal(false)
+        setNewReward({ name: '', description: '', pointsCost: 50 })
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Failed to create reward:', error)
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -52,15 +105,18 @@ export default function MilestonesPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Rewards</h1>
-        <p className="text-gray-500">Milestones and achievements</p>
+      <header className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Rewards Shop</h1>
+          <p className="text-gray-500">Spend your hard-earned points</p>
+        </div>
+        <Button onClick={() => setShowAddModal(true)}>+ Add Reward</Button>
       </header>
 
       {users.length > 0 && (
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Viewing progress for:
+            Who's redeeming?
           </label>
           <div className="flex gap-2 flex-wrap">
             {users.map((user) => (
@@ -82,79 +138,100 @@ export default function MilestonesPage() {
 
       {selectedUser && (
         <Card className="mb-6">
-          <div className="p-4">
-            <p className="text-sm text-gray-500">Current Points</p>
-            <p className="text-3xl font-bold text-primary-600">
-              {selectedUser.lifetimePoints}
-            </p>
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Available Points</p>
+              <p className="text-3xl font-bold text-primary-600">
+                {selectedUser.spendablePoints}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Lifetime Earned</p>
+              <p className="text-xl font-semibold text-gray-400">
+                {selectedUser.lifetimePoints}
+              </p>
+            </div>
           </div>
         </Card>
       )}
 
-      {milestones.length === 0 ? (
+      {rewards.length === 0 ? (
         <EmptyState
-          title="No milestones"
-          description="Milestones will appear here."
+          title="No rewards yet"
+          description="Add rewards that family members can redeem with their points."
           icon="rewards"
         />
       ) : (
-        <div className="space-y-3">
-          {milestones.map((milestone) => {
-            const isAchieved = selectedUser
-              ? selectedUser.lifetimePoints >= milestone.pointsRequired
-              : false
-            const userRedemption = milestone.redemptions?.find(
-              (r) => r.userId === selectedUserId
-            )
+        <div className="grid gap-4 sm:grid-cols-2">
+          {rewards.map((reward) => {
+            const canAfford = selectedUser && selectedUser.spendablePoints >= reward.pointsCost
 
             return (
-              <Card key={milestone.id}>
-                <div className={`p-4 ${isAchieved ? '' : 'opacity-50'}`}>
-                  <div className="flex items-center gap-4">
-                    <div className="text-3xl">
-                      {isAchieved ? '🏆' : '🔒'}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">
-                        {milestone.rewardName}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {milestone.description || `Reach ${milestone.pointsRequired} points`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-bold ${isAchieved ? 'text-green-500' : 'text-gray-400'}`}>
-                        {milestone.pointsRequired} pts
-                      </p>
-                      {isAchieved && (
-                        <p className="text-xs text-green-500">Unlocked!</p>
-                      )}
-                    </div>
+              <Card key={reward.id}>
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 text-lg">{reward.name}</h3>
+                    <span className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-sm font-bold">
+                      {reward.pointsCost} pts
+                    </span>
                   </div>
-                  {selectedUser && !isAchieved && (
-                    <div className="mt-3">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-primary-500 h-2 rounded-full transition-all"
-                          style={{
-                            width: `${Math.min(
-                              100,
-                              (selectedUser.lifetimePoints / milestone.pointsRequired) * 100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {milestone.pointsRequired - selectedUser.lifetimePoints} points to go
-                      </p>
-                    </div>
+                  {reward.description && (
+                    <p className="text-gray-500 text-sm mb-4">{reward.description}</p>
                   )}
+                  <Button
+                    onClick={() => redeemReward(reward.id)}
+                    disabled={!canAfford || redeeming === reward.id}
+                    variant={canAfford ? 'primary' : 'secondary'}
+                    className="w-full"
+                  >
+                    {redeeming === reward.id
+                      ? 'Redeeming...'
+                      : canAfford
+                      ? 'Redeem'
+                      : `Need ${reward.pointsCost - (selectedUser?.spendablePoints || 0)} more pts`}
+                  </Button>
                 </div>
               </Card>
             )
           })}
         </div>
       )}
+
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Reward"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Reward Name"
+            value={newReward.name}
+            onChange={(e) => setNewReward({ ...newReward, name: e.target.value })}
+            placeholder="e.g., Pizza Night, Extra Screen Time"
+          />
+          <Textarea
+            label="Description (optional)"
+            value={newReward.description}
+            onChange={(e) => setNewReward({ ...newReward, description: e.target.value })}
+            placeholder="What does this reward include?"
+          />
+          <Input
+            label="Point Cost"
+            type="number"
+            value={newReward.pointsCost}
+            onChange={(e) => setNewReward({ ...newReward, pointsCost: parseInt(e.target.value) || 0 })}
+            min={1}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={createReward} disabled={creating || !newReward.name.trim()}>
+              {creating ? 'Creating...' : 'Add Reward'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

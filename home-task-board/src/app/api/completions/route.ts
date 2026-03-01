@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
         where: { id: userId },
         data: {
           lifetimePoints: { increment: totalPoints },
+          spendablePoints: { increment: totalPoints },
           currentStreak: newStreak,
           streakBonus,
           lastActiveDate: new Date(),
@@ -136,32 +137,6 @@ export async function POST(request: NextRequest) {
           ]
         : []),
     ])
-
-    // Check for milestone achievements
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: userId },
-    })
-
-    if (updatedUser) {
-      const unredeemedMilestones = await prisma.milestone.findMany({
-        where: {
-          pointsRequired: { lte: updatedUser.lifetimePoints },
-          redemptions: {
-            none: { userId },
-          },
-        },
-      })
-
-      // Create milestone redemptions for newly achieved milestones
-      if (unredeemedMilestones.length > 0) {
-        await prisma.milestoneRedemption.createMany({
-          data: unredeemedMilestones.map((m) => ({
-            milestoneId: m.id,
-            userId,
-          })),
-        })
-      }
-    }
 
     return NextResponse.json(completion, { status: 201 })
   } catch (error) {

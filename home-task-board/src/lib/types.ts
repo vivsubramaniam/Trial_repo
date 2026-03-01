@@ -3,6 +3,7 @@ export interface User {
   name: string
   photoPath: string | null
   lifetimePoints: number
+  spendablePoints: number
   currentStreak: number
   streakBonus: number
   lastActiveDate: Date | null
@@ -36,22 +37,23 @@ export interface TaskCompletion {
   notes: string | null
 }
 
-export interface Milestone {
+export interface Reward {
   id: string
-  pointsRequired: number
-  rewardName: string
+  name: string
   description: string | null
+  pointsCost: number
+  isActive: boolean
   createdAt: Date
 }
 
-export interface MilestoneRedemption {
+export interface RewardRedemption {
   id: string
-  milestoneId: string
-  milestone?: Milestone
+  rewardId: string
+  reward?: Reward
   userId: string
   user?: User
-  reachedAt: Date
-  redeemedAt: Date | null
+  redeemedAt: Date
+  pointsSpent: number
 }
 
 export interface DailyStats {

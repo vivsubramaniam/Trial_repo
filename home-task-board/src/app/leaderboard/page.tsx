@@ -66,9 +66,10 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-primary-600">
-                    {user.lifetimePoints}
+                    {user.spendablePoints}
                   </p>
-                  <p className="text-xs text-gray-500">points</p>
+                  <p className="text-xs text-gray-500">available</p>
+                  <p className="text-xs text-gray-400">{user.lifetimePoints} lifetime</p>
                 </div>
               </div>
             </Card>

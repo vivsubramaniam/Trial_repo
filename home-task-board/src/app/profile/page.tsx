@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -78,6 +79,24 @@ export default function ProfilePage() {
     }
   }
 
+  async function resetAllData() {
+    if (!confirm('This will delete ALL users, tasks, and points. Are you sure?')) return
+    if (!confirm('Really? This cannot be undone!')) return
+
+    setResetting(true)
+    try {
+      const res = await fetch('/api/reset', { method: 'POST' })
+      if (res.ok) {
+        setUsers([])
+        alert('All data has been reset!')
+      }
+    } catch (error) {
+      console.error('Failed to reset data:', error)
+    } finally {
+      setResetting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -128,6 +147,21 @@ export default function ProfilePage() {
           ))}
         </div>
       )}
+
+      {/* Testing Tools */}
+      <div className="mt-12 pt-6 border-t border-gray-200">
+        <h2 className="text-sm font-medium text-gray-500 mb-3">Testing Tools</h2>
+        <Button
+          variant="danger"
+          onClick={resetAllData}
+          disabled={resetting}
+        >
+          {resetting ? 'Resetting...' : 'Reset All Data'}
+        </Button>
+        <p className="text-xs text-gray-400 mt-2">
+          Deletes all users, tasks, completions, and points. Milestones are kept.
+        </p>
+      </div>
 
       <Modal
         isOpen={showModal}
