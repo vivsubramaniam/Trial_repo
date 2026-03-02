@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Curriculum Structure ─────────────────────────────────────────
+
+model Track {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+
+  topics Topic[]
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  orderIndex  Int
+  trackId     String
+  track       Track    @relation(fields: [trackId], references: [id])
+  createdAt   DateTime @default(now())
+
+  lessons          Lesson[]
+  dependsOn        TopicDependency[] @relation("DependentTopic")
+  prerequisiteFor  TopicDependency[] @relation("PrerequisiteTopic")
+
+  @@index([trackId])
+}
+
+model TopicDependency {
+  id               String @id @default(cuid())
+  dependentTopicId String
+  dependentTopic   Topic  @relation("DependentTopic", fields: [dependentTopicId], references: [id])
+  prerequisiteTopicId String
+  prerequisiteTopic   Topic  @relation("PrerequisiteTopic", fields: [prerequisiteTopicId], references: [id])
+
+  @@unique([dependentTopicId, prerequisiteTopicId])
+}
+
+// ─── Lessons & Exercises ──────────────────────────────────────────
+
+model Lesson {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  content     String   @db.Text
+  difficulty  Int      @default(1)
+  orderIndex  Int
+  topicId     String
+  topic       Topic    @relation(fields: [topicId], references: [id])
+  aiGenerated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exercises Exercise[]
+
+  @@index([topicId])
+}
+
+model Exercise {
+  id           String  @id @default(cuid())
+  title        String
+  description  String  @db.Text
+  exerciseType String  @default("write") // "fill-blank", "write", "debug"
+  starterCode  String  @db.Text
+  solutionCode String? @db.Text
+  difficulty   Int     @default(1)
+  hints        String? @db.Text // JSON array of progressive hints
+  lessonId     String
+  lesson       Lesson  @relation(fields: [lessonId], references: [id])
+  aiGenerated  Boolean @default(false)
+  createdAt    DateTime @default(now())
+
+  submissions Submission[]
+
+  @@index([lessonId])
+}
+
+// ─── Submissions & Scoring ────────────────────────────────────────
+
+model Submission {
+  id            String   @id @default(cuid())
+  code          String   @db.Text
+  aiFeedback    String   @db.Text
+  score         Int      // 0-100
+  isCorrect     Boolean
+  attemptNumber Int
+  timeSpentSec  Int?
+  exerciseId    String
+  exercise      Exercise @relation(fields: [exerciseId], references: [id])
+  createdAt     DateTime @default(now())
+
+  codeQuality CodeQualityScore?
+
+  @@index([exerciseId])
+}
+
+model CodeQualityScore {
+  id            String     @id @default(cuid())
+  submissionId  String     @unique
+  submission    Submission @relation(fields: [submissionId], references: [id])
+  correctness   Int        // 1-5
+  readability   Int        // 1-5
+  efficiency    Int        // 1-5
+  bestPractices Int        // 1-5
+  createdAt     DateTime   @default(now())
+}
+
+// ─── Progress & Analytics ─────────────────────────────────────────
+
+model UserProgress {
+  id                String    @id @default(cuid())
+  topicId           String    @unique
+  currentDifficulty Int       @default(1)
+  lessonsCompleted  Int       @default(0)
+  exercisesPassed   Int       @default(0)
+  exercisesFailed   Int       @default(0)
+  averageScore      Float     @default(0)
+  streakCount       Int       @default(0)
+  lastActivityAt    DateTime?
+  updatedAt         DateTime  @updatedAt
+}
+
+model SkillRating {
+  id        String   @id @default(cuid())
+  skillName String   @unique // e.g., "OOP", "Templates", "TLM Sockets"
+  rating    Float    @default(0) // 0-5
+  topicId   String?  // optional link to topic
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  topicId   String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  role      String      // "user" | "assistant"
+  content   String      @db.Text
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@index([sessionId])
+}
+
+// ─── Bookmarks ────────────────────────────────────────────────────
+
+model Bookmark {
+  id           String   @id @default(cuid())
+  type         String   // "lesson" | "exercise" | "chat_message"
+  referenceId  String   // ID of the bookmarked item
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([type])
+}
+
+// ─── Session State ────────────────────────────────────────────────
+
+model SessionState {
+  id             String   @id @default(cuid())
+  key            String   @unique // e.g., "last_lesson", "last_exercise", "last_chat"
+  value          String   @db.Text // JSON value
+  updatedAt      DateTime @updatedAt
+}
+
+// ─── Capstone Projects ────────────────────────────────────────────
+
+model CapstoneProject {
+  id          String @id @default(cuid())
+  slug        String @unique
+  title       String
+  description String @db.Text
+  size        String // "mini" | "medium" | "full"
+  trackId     String?
+  topicId     String?
+  difficulty  Int    @default(1)
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+
+  steps CapstoneStep[]
+}
+
+model CapstoneStep {
+  id            String          @id @default(cuid())
+  title         String
+  description   String          @db.Text
+  skeletonCode  String          @db.Text
+  orderIndex    Int
+  projectId     String
+  project       CapstoneProject @relation(fields: [projectId], references: [id])
+  userCode      String?         @db.Text
+  aiFeedback    String?         @db.Text
+  isCompleted   Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([projectId])
+}
